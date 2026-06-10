@@ -320,9 +320,7 @@
     <div class="form-section">
       <h2>Estoque dos Componentes</h2>
       <div class="form-group">
-        <label for="estoqueArquivo">Importar arquivo de estoque diario (.xml):</label>
-        <input type="file" id="estoqueArquivo" accept=".xml,text/xml,application/xml">
-        <div id="estoqueStatus" class="estoque-status">Carregando estoque online. Se necessario, selecione o XML manualmente.</div>
+        <div id="estoqueStatus" class="estoque-status">Carregando estoque online.</div>
       </div>
     </div>
 
@@ -715,31 +713,12 @@ function montarUrlEstoqueOnline() {
     return `${ESTOQUE_XML_URL}${separador}v=${Date.now()}`;
 }
 
-document.getElementById('estoqueArquivo').addEventListener('change', function(event) {
-    const arquivo = event.target.files[0];
-    if (!arquivo) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            carregarEstoqueDeTexto(e.target.result, arquivo.name);
-        } catch (erro) {
-            estoquePorProduto = {};
-            estoqueCarregado = false;
-            aplicarEstoqueNasPecas();
-            atualizarStatusEstoque('Nao foi possivel importar o estoque. Verifique se o XML e a exportacao correta do Protheus.');
-            alert(erro.message);
-        }
-    };
-    reader.readAsText(arquivo);
-});
-
 fetch(montarUrlEstoqueOnline(), { cache: 'no-store' })
     .then(resposta => resposta.ok ? resposta.text() : Promise.reject())
     .then(texto => carregarEstoqueDeTexto(texto, ESTOQUE_XML_URL))
     .catch(() => {
         if (!carregarEstoqueLocal()) {
-            atualizarStatusEstoque('Nao foi possivel carregar o estoque online. Selecione o XML diario acima para exibir os saldos.');
+            atualizarStatusEstoque('Nao foi possivel carregar o estoque online. Verifique se o arquivo datastock.xml esta publicado no GitHub.');
         }
     });
 
