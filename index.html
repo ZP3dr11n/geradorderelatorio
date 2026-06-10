@@ -153,15 +153,6 @@
       width: 40px; padding: 8px; text-align: center;
     }
 
-    .estoque-status {
-      margin-top: 8px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      background-color: #f8f9fa;
-      border: 1px solid var(--cor-borda);
-      font-size: 14px;
-    }
-
     .peca-info-texto {
       display: flex;
       flex-direction: column;
@@ -601,11 +592,6 @@ function textoEstoque(quantidade) {
     return `Estoque: ${formatarQuantidadeEstoque(quantidade)}`;
 }
 
-function atualizarStatusEstoque(mensagem) {
-    const status = document.getElementById('estoqueStatus');
-    if (status) status.textContent = mensagem;
-}
-
 function parseEstoqueXml(xmlTexto) {
     const xml = new DOMParser().parseFromString(xmlTexto, 'application/xml');
     if (xml.querySelector('parsererror')) {
@@ -665,7 +651,6 @@ function carregarEstoqueDeTexto(xmlTexto, origem) {
     estoqueCarregado = true;
     salvarEstoqueLocal(origem);
     aplicarEstoqueNasPecas();
-    atualizarStatusEstoque(`Estoque carregado de ${origem}: ${Object.keys(estoquePorProduto).length} produtos encontrados.`);
 }
 
 function salvarEstoqueLocal(origem) {
@@ -692,8 +677,6 @@ function carregarEstoqueLocal() {
         estoqueCarregado = true;
         aplicarEstoqueNasPecas();
 
-        const dataSalva = dados.salvoEm ? new Date(dados.salvoEm).toLocaleString('pt-BR') : 'data desconhecida';
-        atualizarStatusEstoque(`Estoque carregado do navegador (${dados.origem || 'arquivo anterior'}), salvo em ${dataSalva}. Importe um novo XML quando receber a atualizacao diaria.`);
         return true;
     } catch (erro) {
         console.warn('Nao foi possivel carregar o estoque salvo no navegador.', erro);
@@ -710,9 +693,7 @@ fetch(montarUrlEstoqueOnline(), { cache: 'no-store' })
     .then(resposta => resposta.ok ? resposta.text() : Promise.reject())
     .then(texto => carregarEstoqueDeTexto(texto, ESTOQUE_XML_URL))
     .catch(() => {
-        if (!carregarEstoqueLocal()) {
-            atualizarStatusEstoque('Nao foi possivel carregar o estoque online. Verifique se o arquivo datastock.xml esta publicado no GitHub.');
-        }
+        carregarEstoqueLocal();
     });
 
 // ATUALIZADO: Event Listener para quando o modelo muda
