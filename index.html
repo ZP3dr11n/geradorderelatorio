@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Gerador de Laudo Técnico - Robôs</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <style>
     /* --- ESTILO GERAL E CORES --- */
     :root {
@@ -327,7 +328,6 @@
 
 <script>
 // --- CONFIGURAÇÃO DOS SERVIÇOS (TABELA DA IMAGEM) ---
-// Separação clara entre Residencial e Comercial com os códigos específicos
 const tabelaServicos = {
     residencial: [
         { nivel: "Simples",  codigo: "27792", desc: "SERVIÇO CONSERTO ROBÔ RES NL1", detalhe: "Serviços de manutenção corretiva e preventiva (Fonte, Filtro e Limpeza)." },
@@ -342,7 +342,6 @@ const tabelaServicos = {
 };
 
 // --- MAPEAMENTO DO TIPO DE ROBÔ (Define qual tabela usar) ---
-// WAVE100 e WAVE100 2X2 são Comerciais, o resto é Residencial
 const categoriaRobo = {
     "RB2": "residencial",
     "RB6": "residencial",
@@ -696,20 +695,17 @@ fetch(montarUrlEstoqueOnline(), { cache: 'no-store' })
         carregarEstoqueLocal();
     });
 
-// ATUALIZADO: Event Listener para quando o modelo muda
 document.getElementById("modelo").addEventListener("change", function() {
   const modelo = this.value;
   const pecasBox = document.getElementById("pecasBox");
   const lista = document.getElementById("pecasLista");
   const selectServico = document.getElementById("selecaoServico");
 
-  // Limpa lista de peças e select de serviços
   lista.innerHTML = "";
   selectServico.innerHTML = '<option value="">-- Selecione o serviço --</option>';
   selectServico.disabled = true;
 
   if (modelo) {
-    // 1. Lógica das peças
     if (pecasPorModelo[modelo]) {
       pecasBox.classList.remove("hidden");
       const pecasDoModelo = pecasPorModelo[modelo];
@@ -731,13 +727,11 @@ document.getElementById("modelo").addEventListener("change", function() {
       pecasBox.classList.add("hidden");
     }
 
-    // 2. Lógica do Serviço (Residencial vs Comercial)
     const tipo = categoriaRobo[modelo];
     if (tipo && tabelaServicos[tipo]) {
         selectServico.disabled = false;
         tabelaServicos[tipo].forEach(servico => {
             const option = document.createElement("option");
-            // Usamos o JSON.stringify para passar o objeto todo no value e recuperar fácil depois
             option.value = JSON.stringify(servico); 
             option.text = `${servico.nivel} - ${servico.desc}`;
             selectServico.appendChild(option);
@@ -793,7 +787,6 @@ function togglePecaOpcoes(checkbox) {
     }
 }
 
-// Lógica para preview das imagens
 const imagensParaLaudo = [];
 document.getElementById("fotos").addEventListener("change", function(event) {
     const preview = document.getElementById("previewFotos");
@@ -825,7 +818,6 @@ function gerarLaudo() {
     if (document.getElementById("obsTecnicas").value.trim() === '') erros.push("O campo 'Observações Técnicas' é obrigatório.");
     if (imagensParaLaudo.length === 0) erros.push("É necessário anexar pelo menos uma foto.");
     
-    // Validação do Serviço
     const selectServico = document.getElementById("selecaoServico");
     if (selectServico.value === "") erros.push("É obrigatório selecionar a 'Classificação do Serviço'.");
 
@@ -844,7 +836,6 @@ function gerarLaudo() {
         return;
     }
 
-    // Extrair dados do serviço selecionado
     let dadosServico = {};
     try {
         dadosServico = JSON.parse(selectServico.value);
@@ -883,7 +874,7 @@ function gerarLaudo() {
         }),
         imagens: imagensParaLaudo,
         dataGeracao: dataGeracao, 
-        servico: dadosServico, // Novo objeto de serviço
+        servico: dadosServico, 
         garantia: garantia
     };
 
@@ -939,7 +930,6 @@ function gerarLaudo() {
             .assinatura-box { width: 300px; }
             .assinatura-linha { border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; }
             
-            /* ESTILO DA NOVA TABELA DE SERVIÇO NO PDF */
             .service-table { width: 100%; margin-top: 20px; border: 2px solid #002060; }
             .service-table th { background-color: #002060; color: white; text-align: center; }
             .service-table td { text-align: center; padding: 10px; }
@@ -1037,7 +1027,7 @@ function gerarLaudo() {
                 <div class="assinatura-box"><div class="assinatura-linha">Laboratório(Estagiário)</div></div>
             </div>
             <div class="button-container no-print">
-              <button class="button save-btn" onclick="salvarNaPlanilha()">Salvar na Planilha</button>
+              <button class="button save-btn" onclick="salvarEAtualizarIntegracoes()">Salvar e Atualizar Trello</button>
               <button class="button print-btn" onclick="window.print()">Imprimir Laudo</button>
             </div>
           </div>
@@ -1047,63 +1037,91 @@ function gerarLaudo() {
             const GOOGLE_WEBAPP_URL = '${GOOGLE_WEBAPP_URL}';
             const UPLOAD_TOKEN = '${UPLOAD_TOKEN}';
             
-            function salvarNaPlanilha() {
-              const payload = {
-                token: UPLOAD_TOKEN,
-                ra: laudoDataParaEnvio.ra,
-                cliente: laudoDataParaEnvio.cliente,
-                equipamento: laudoDataParaEnvio.equipamento,
-                dataEntrada: laudoDataParaEnvio.dataEntrada,
-                horaEntrada: laudoDataParaEnvio.horaEntrada,
-                acessorios: laudoDataParaEnvio.acessorios,
-                codRobo: laudoDataParaEnvio.codRobo,
-                codFonte: laudoDataParaEnvio.codFonte,
-                codMotor: laudoDataParaEnvio.codMotor,
-                codBateria: laudoDataParaEnvio.codBateria,
-                
-                // Mapeando os novos campos para colunas (ajuste o Google Script se necessário)
-                // Para não quebrar sua planilha, estou enviando o código e nível no campo antigo de tempoAnalise
-                tempoAnalise: laudoDataParaEnvio.servico.codigo + " - " + laudoDataParaEnvio.servico.nivel, 
-                
-                garantia: laudoDataParaEnvio.garantia,
-                defeitoRelatado: laudoDataParaEnvio.defeitoRelatado.replace(/<br>/g, "\\n"),
-                obsTecnicas: laudoDataParaEnvio.obsTecnicas.replace(/<br>/g, "\\n"),
-                obsGerais: laudoDataParaEnvio.obsGerais.replace(/<br>/g, "\\n"),
-                pecasSelecionadas: laudoDataParaEnvio.pecasSelecionadas
-              };
-
+            // Variáveis globais do Trello integradas
+            const TRELLO_KEY = '9e8574760aa9dc5b28af2a20ed4e131c';
+            const TRELLO_TOKEN = 'ATTAc2877eec188eaa12875d83069864f17026f6330eaeaa3da937181accbbdb9008848DC1CE';
+            const TRELLO_ID_LIST = '6a3342246b70ca024a930cfd';
+            
+            async function salvarEAtualizarIntegracoes() {
               const btnSalvar = document.querySelector('.save-btn');
               btnSalvar.disabled = true;
-              btnSalvar.textContent = 'Enviando...';
+              btnSalvar.textContent = 'Processando...';
 
-              fetch(GOOGLE_WEBAPP_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(payload)
-              })
-              .then(r => r.text())
-              .then(txt => {
+              try {
+                // 1. Atualizar Trello
+                const urlBusca = "https://api.trello.com/1/lists/" + TRELLO_ID_LIST + "/cards?key=" + TRELLO_KEY + "&token=" + TRELLO_TOKEN;
+                const respCards = await fetch(urlBusca);
+                const cards = await respCards.json();
+                
+                // Busca o cartão que contenha o ID do laudo no título
+                const cartao = cards.find(c => c.name.includes('ID: ' + laudoDataParaEnvio.ra));
+                
+                if (cartao) {
+                    let novaDescricao = cartao.desc;
+                    // Procura o campo de aprovação vazio e substitui ou adiciona ao final
+                    if (novaDescricao.includes('**Data da aprovação:**')) {
+                        novaDescricao = novaDescricao.replace('**Data da aprovação:**', '**Data da aprovação:** ' + laudoDataParaEnvio.dataGeracao);
+                    } else {
+                        novaDescricao += "\\n**Data do Relatório:** " + laudoDataParaEnvio.dataGeracao;
+                    }
+                    
+                    const urlAtualiza = "https://api.trello.com/1/cards/" + cartao.id + "?key=" + TRELLO_KEY + "&token=" + TRELLO_TOKEN + "&desc=" + encodeURIComponent(novaDescricao);
+                    await fetch(urlAtualiza, { method: 'PUT' });
+                } else {
+                    console.warn('Cartão não encontrado no Trello para o ID ' + laudoDataParaEnvio.ra);
+                }
+
+                // 2. Salvar no Sheets com a variável nova
+                const payload = {
+                  token: UPLOAD_TOKEN,
+                  ra: laudoDataParaEnvio.ra,
+                  cliente: laudoDataParaEnvio.cliente,
+                  equipamento: laudoDataParaEnvio.equipamento,
+                  dataEntrada: laudoDataParaEnvio.dataEntrada,
+                  horaEntrada: laudoDataParaEnvio.horaEntrada,
+                  acessorios: laudoDataParaEnvio.acessorios,
+                  codRobo: laudoDataParaEnvio.codRobo,
+                  codFonte: laudoDataParaEnvio.codFonte,
+                  codMotor: laudoDataParaEnvio.codMotor,
+                  codBateria: laudoDataParaEnvio.codBateria,
+                  tempoAnalise: laudoDataParaEnvio.servico.codigo + " - " + laudoDataParaEnvio.servico.nivel, 
+                  garantia: laudoDataParaEnvio.garantia,
+                  defeitoRelatado: laudoDataParaEnvio.defeitoRelatado.replace(/<br>/g, "\\n"),
+                  obsTecnicas: laudoDataParaEnvio.obsTecnicas.replace(/<br>/g, "\\n"),
+                  obsGerais: laudoDataParaEnvio.obsGerais.replace(/<br>/g, "\\n"),
+                  pecasSelecionadas: laudoDataParaEnvio.pecasSelecionadas,
+                  // Informação da Data do Relatório injetada na Planilha
+                  dataRelatorio: laudoDataParaEnvio.dataGeracao
+                };
+
+                const sheetsResp = await fetch(GOOGLE_WEBAPP_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'text/plain' },
+                  body: JSON.stringify(payload)
+                });
+                
+                const txt = await sheetsResp.text();
                 try {
                   const res = JSON.parse(txt);
                   if (res.ok) {
-                    alert('Dados salvos na planilha com sucesso!');
+                    alert('Dados salvos na planilha e Trello atualizado com sucesso!');
                     btnSalvar.textContent = 'Salvo com Sucesso!';
                   } else {
                     alert('Falha ao salvar na planilha: ' + (res.error || 'Erro desconhecido'));
                     btnSalvar.disabled = false;
-                    btnSalvar.textContent = 'Salvar na Planilha';
+                    btnSalvar.textContent = 'Salvar e Atualizar Trello';
                   }
                 } catch {
-                  alert('Upload concluído (sem resposta JSON). Verifique a planilha.');
+                  alert('Processo concluído. Verifique o Trello e a planilha.');
                   btnSalvar.textContent = 'Salvo!';
                 }
-              })
-              .catch(err => {
+
+              } catch (err) {
                 console.error(err);
-                alert('Erro de conexão ao salvar na planilha: ' + err);
+                alert('Erro de conexão durante o processo: ' + err.message);
                 btnSalvar.disabled = false;
-                btnSalvar.textContent = 'Salvar na Planilha';
-              });
+                btnSalvar.textContent = 'Salvar e Atualizar Trello';
+              }
             }
           <\/script>
         </body>
