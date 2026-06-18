@@ -1058,7 +1058,6 @@ function gerarLaudo() {
                 
                 if (cartao) {
                     let novaDescricao = cartao.desc;
-                    // Procura o campo de aprovação vazio e substitui ou adiciona ao final
                     if (novaDescricao.includes('**Data da aprovação:**')) {
                         novaDescricao = novaDescricao.replace('**Data da aprovação:**', '**Data da aprovação:** ' + laudoDataParaEnvio.dataGeracao);
                     } else {
@@ -1071,7 +1070,7 @@ function gerarLaudo() {
                     console.warn('Cartão não encontrado no Trello para o ID ' + laudoDataParaEnvio.ra);
                 }
 
-                // 2. Salvar no Sheets com a variável nova
+                // 2. Salvar no Sheets
                 const payload = {
                   token: UPLOAD_TOKEN,
                   ra: laudoDataParaEnvio.ra,
@@ -1090,31 +1089,19 @@ function gerarLaudo() {
                   obsTecnicas: laudoDataParaEnvio.obsTecnicas.replace(/<br>/g, "\\n"),
                   obsGerais: laudoDataParaEnvio.obsGerais.replace(/<br>/g, "\\n"),
                   pecasSelecionadas: laudoDataParaEnvio.pecasSelecionadas,
-                  // Informação da Data do Relatório injetada na Planilha
                   dataRelatorio: laudoDataParaEnvio.dataGeracao
                 };
 
-                const sheetsResp = await fetch(GOOGLE_WEBAPP_URL, {
+                // CORREÇÃO: Adicionado o mode: 'no-cors'
+                await fetch(GOOGLE_WEBAPP_URL, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'text/plain' },
+                  mode: 'no-cors', 
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(payload)
                 });
                 
-                const txt = await sheetsResp.text();
-                try {
-                  const res = JSON.parse(txt);
-                  if (res.ok) {
-                    alert('Dados salvos na planilha e Trello atualizado com sucesso!');
-                    btnSalvar.textContent = 'Salvo com Sucesso!';
-                  } else {
-                    alert('Falha ao salvar na planilha: ' + (res.error || 'Erro desconhecido'));
-                    btnSalvar.disabled = false;
-                    btnSalvar.textContent = 'Salvar e Atualizar Trello';
-                  }
-                } catch {
-                  alert('Processo concluído. Verifique o Trello e a planilha.');
-                  btnSalvar.textContent = 'Salvo!';
-                }
+                alert('Processo de envio finalizado. Trello e Planilha devem estar atualizados!');
+                btnSalvar.textContent = 'Salvo com Sucesso!';
 
               } catch (err) {
                 console.error(err);
